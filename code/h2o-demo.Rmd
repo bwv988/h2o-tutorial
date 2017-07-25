@@ -384,8 +384,8 @@ http://localhost:9000
   
 - Create new project
     - Select previously set-up cluster.
-    - Select a data frame
-    - Specify model type
-    - Import models
+    - Select a data frame.
+    - Specify model type.
+    - Import models.
     
 - Sadly, I got some import errors here `:(`

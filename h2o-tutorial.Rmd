@@ -13,6 +13,8 @@ output:
 
 ## Overview
 
+\orange{Agenda}
+
 - H2O at a glance
 - H2O projects
 - Architecture
@@ -20,7 +22,13 @@ output:
 - ML algorithms
 - Demo
 
+\orange{Links}
+
+- Git repo: https://github.com/bwv988/h2o-tutorial
+- Demo: http://rpubs.com/bwv988/h2odemo
+
 ## H2O at a glance
+
 \begin{exampleblock}{}
       {\large ``H2O is an open source, in-memory, distributed, fast, and scalable machine learning and predictive analytics platform that   allows you to build machine learning models on big data and provides easy productionalization of those models in an enterprise environment.''}
   \vskip5mm
@@ -34,8 +42,8 @@ output:
 - Implemented from scratch in Java.
 - Multiple language bindings, or APIs: Java, Scala, R, Python.
 - \HIGHLIGHT{Big data}: Interfaces to Spark, Hadoop.
-- \orange{Deep Learning}: Has abstraction layer to call TensorFlow, MXNet, Caffe backends.
-- H2O company advisors include *Rob Tibshirani* and *Trevor Hastie* of ESL fame. `;)`
+- \orange{Deep Learning}: Has abstraction layer to call TensorFlow, MXNet, Caffe back-ends.
+- H2O company advisers include *Rob Tibshirani* and *Trevor Hastie* of ESL fame. `;)`
 
 ## H2O projects
 
@@ -43,13 +51,13 @@ output:
 - **Sparkling Water**: Execute H2O workloads on a Spark cluster.
 - **Deep Water** (preview): Call TensorFlow, MXNet, Caffee from within H2O.
 - **Flow**: Integral part of H2O; web-based, notebook-style, interactive, "point-and-click" UI for H2O.
-- **Steam**: Cluster management, collaborate, manage models, data, teams
+- **Steam**: Cluster management, collaborate, manage models, data, teams.
 
 ## Architecture: Highlights
 
 - The H2O cloud consists of one or more **nodes**.
 - Each node runs as a separate JVM process.
-- Employs three-layered architecture: Language, Algorithms, Infrastructure
+- Employs *three-layered* architecture: Language, Algorithms, Infrastructure.
 - **Language**:
     - Native language support for Java, Scala. 
     - REST API for other languages.
@@ -68,7 +76,7 @@ output:
 \end{figure}
 
 ## Architecture: How R (or Python) interface with H2O
-> No actual computations, or data operations done in R.
+> No actual H2O computations, or data operations are done in R.
 
 ```{r eval=FALSE}
 # Example: Load data from HDFS into H2O.
@@ -127,18 +135,17 @@ h2o_df = h2o.importFile("hdfs://give/me/data.csv")
 
 [^1]: CNN and RNN only through 3rd party integrations, e.g. TensorFlow.
 
-## Demo part
+## Demo
 
-http://rpubs.com/bwv988/h2odemo
+- Supervised learning example in R.
+- Flow demo.
+- Steam demo.
 
-- Supervised learning example in R
-- Flow demo
-- Steam demo 
-
+> http://rpubs.com/bwv988/h2odemo
 
 ## References
 
 - H2O website: https://www.h2o.ai/ 
 - Some pictures "stolen" from H2O's documentation: http://docs.h2o.ai/h2o/latest-stable/h2o-docs/welcome.html
 - Erin Ledell's excellent presentation: https://www.stat.berkeley.edu/~ledell/docs/h2o_hpccon_oct2015.pdf
-- Darren Cook: "Practical Machine Learning with H2O" -- https://www.amazon.com/Practical-Machine-Learning-H2O-Techniques/dp/149196460X
+- Darren Cook: "Practical Machine Learning with H2O" -- https://www.amazon.com/Practical-Machine-Learning-H2O-Techniques/dp/149196460X Example code is available in GitHub: https://github.com/DarrenCook/h2o

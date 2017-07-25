@@ -1,0 +1,144 @@
+---
+title: "H2O -- Tutorial and Demo"
+subtitle: "A brief intro to H2O"
+author: "Ralph Schlosser"
+date: "July 2017"
+output:
+  beamer_presentation:
+    incremental: false
+    includes:
+      in_header: [includes/mystyle.tex, includes/settings.tex]
+    keep_tex: true
+---
+
+## Overview
+
+- H2O at a glance
+- H2O projects
+- Architecture
+- Data input and output
+- ML algorithms
+- Demo
+
+## H2O at a glance
+\begin{exampleblock}{}
+      {\large ``H2O is an open source, in-memory, distributed, fast, and scalable machine learning and predictive analytics platform that   allows you to build machine learning models on big data and provides easy productionalization of those models in an enterprise environment.''}
+  \vskip5mm
+  \hspace*\fill{\small--- H2O.ai documentation}
+\end{exampleblock}
+
+  
+## H2O at a glance
+
+- Open source software, backed by commercial company.
+- Implemented from scratch in Java.
+- Multiple language bindings, or APIs: Java, Scala, R, Python.
+- \HIGHLIGHT{Big data}: Interfaces to Spark, Hadoop.
+- \orange{Deep Learning}: Has abstraction layer to call TensorFlow, MXNet, Caffe backends.
+- H2O company advisors include *Rob Tibshirani* and *Trevor Hastie* of ESL fame. `;)`
+
+## H2O projects
+
+- **H2O**: Core project.
+- **Sparkling Water**: Execute H2O workloads on a Spark cluster.
+- **Deep Water** (preview): Call TensorFlow, MXNet, Caffee from within H2O.
+- **Flow**: Integral part of H2O; web-based, notebook-style, interactive, "point-and-click" UI for H2O.
+- **Steam**: Cluster management, collaborate, manage models, data, teams
+
+## Architecture: Highlights
+
+- The H2O cloud consists of one or more **nodes**.
+- Each node runs as a separate JVM process.
+- Employs three-layered architecture: Language, Algorithms, Infrastructure
+- **Language**:
+    - Native language support for Java, Scala. 
+    - REST API for other languages.
+- **Algorithms**
+    - Has own implementation of many common ML algorithms.
+    - Separate slide for this.
+- **Infrastructure**
+    - Manage distributed data sets.
+    - Manage distributed (parallel) computations: MapReduce.
+
+## Architecture: Overview
+
+\begin{figure}
+  \includegraphics[scale=0.4]{images/h2o_stack.png}
+  \caption*{\tiny H2O components}
+\end{figure}
+
+## Architecture: How R (or Python) interface with H2O
+> No actual computations, or data operations done in R.
+
+```{r eval=FALSE}
+# Example: Load data from HDFS into H2O.
+h2o_df = h2o.importFile("hdfs://give/me/data.csv")
+```
+
+\begincols
+  \begincol{.48\textwidth}
+     \includegraphics[scale=0.2]{images/r_hdfs_read_step2.png}
+  \endcol
+  \begincol{.48\textwidth}
+     \includegraphics[scale=0.2]{images/r_hdfs_read_step3.png}
+  \endcol
+\endcols
+
+## Data input and output
+> Many formats and sources are supported. Automatic data schema discovery for most scenarios.
+
+\begincols[T]
+  \begincol{.48\textwidth}
+  {\Large \orange{Formats}}
+  \begin{itemize}
+    \item CSV 
+    \item ORC -- Optimized Row Columnar, new in Hadoop \& Hive
+    \item SVMLight -- Sparse data format
+    \item ARFF -- Attribute Relation File Format, from Weka
+    \item XLS, XLSX
+    \item Avro
+    \item Parquet
+  \end{itemize}
+  \endcol
+  \begincol{.48\textwidth}
+  {\Large \orange{Sources}}
+  \begin{itemize}
+    \item Local files
+    \item Remote files
+    \item HDFS
+    \item S3
+    \item Alluxio
+    \item JDBC
+  \end{itemize}
+  \endcol
+\endcols
+
+## ML algorithms
+
+> H2O provides highly optimized \orange{from-scratch} implementations of classical, as well as modern techniques on top of its distributed, in-memory processing engine. 
+
+- Deep Learning: Native implementation of a multi-layer, feed-forward ANN. [^1]
+- Distributed Random Forest
+- GLM
+- GBM
+- k-Means clustering
+- PCA
+- ...and many more: http://docs.h2o.ai/h2o/latest-stable/h2o-docs/data-science.html
+
+[^1]: CNN and RNN only through 3rd party integrations, e.g. TensorFlow.
+
+## Demo part
+
+http://rpubs.com/bwv988/h2odemo
+
+- Supervised learning example in R
+- Flow demo
+- Steam demo 
+
+
+## References
+
+- H2O website: https://www.h2o.ai/ 
+- Some pictures "stolen" from H2O's documentation: http://docs.h2o.ai/h2o/latest-stable/h2o-docs/welcome.html
+- Erin Ledell's excellent presentation: https://www.stat.berkeley.edu/~ledell/docs/h2o_hpccon_oct2015.pdf
+- Darren Cook: "Practical Machine Learning with H2O" -- https://www.amazon.com/Practical-Machine-Learning-H2O-Techniques/dp/149196460X

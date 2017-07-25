@@ -1,0 +1,391 @@
+---
+title: "H2O Demo"
+author: "Ralph Schlosser"
+date: "26 July 2017"
+output: html_document
+bibliography: ../bibliography.bib
+---
+
+\renewcommand{\vec}[1]{\underline{#1}}
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+# Enable chunk caching.
+knitr::opts_chunk$set(cache = TRUE)
+
+
+```
+
+## Introduction
+
+This is a quick demo for a presentation on **H2O**:
+
+http://www.h2o.ai
+
+## Preliminaries
+
+### H2O on Docker
+
+There are many ways to run H2O. I'll be using my own H2O docker image to run the subsequent code chunks. The only prerequisite is that Docker is properly configured on your host. Note that H2O also have an official docker image.
+
+Read more about my docker image here: https://github.com/bwv988/docker-h2oai
+
+In Linux, I would simply start H2O in `bash` like so:
+
+```{bash, eval=FALSE}
+docker run -it -p 54321:54321 --name h2oai --rm bwv988/h2oai
+```
+
+If the image isn't present it will be pulled from the central Docker registry. `CTRL + C` will terminate and remove the container.
+
+Once the container is up and running, log files can be inspected by opening a shell into the container:
+
+```{bash, eval = FALSE}
+docker exec -it h2oai bash
+```
+
+Then, logs can be inspected in the `logs/` sub-directory.
+
+
+### H2O R package setup
+
+In order to access H2O, we need to install and load the required H2O R package:
+
+```{r, message=FALSE, warning=FALSE}
+# NOTE: Below is set to FALSE to not re-install when "knitting".
+# Set doit to TRUE to run through the install.
+doit = FALSE
+
+if(doit) {
+  # Check and remove previous installations.
+  if ("package:h2o" %in% search()) { 
+    detach("package:h2o", unload=TRUE) 
+  }
+  
+  if ("h2o" %in% rownames(installed.packages())) { 
+    remove.packages("h2o") 
+  }
+  
+  # Next, we download packages that H2O depends on.
+  pkgs = c("statmod", "RCurl", "jsonlite")
+  for (pkg in pkgs) {
+    if (! (pkg %in% rownames(installed.packages()))) { 
+      install.packages(pkg) 
+    }
+  }
+  
+  # Download, install and initialize the H2O package for R.
+  install.packages("h2o", type="source", repos="http://h2o-release.s3.amazonaws.com/h2o/rel-vajda/4/R")
+}
+
+# Load the library.
+require(h2o)
+```
+
+Now we are in a position to connect R to the H2O docker container:
+
+```{r}
+# This instructs H2O to connect to the instance running in the container.
+
+# Use the below, when running the docker container locally.
+host.ip = "127.0.0.1"
+
+#host.ip = "10.44.149.118"
+h2o.init(ip = host.ip, startH2O = FALSE)
+
+# Disable progress bars for Rpubs. ;)
+h2o.no_progress()
+```
+
+The output tells us something about the size and version of the H2O cloud we're connecting to.
+
+## Getting data into H2O
+
+### Load an R dataset into H2O
+
+Let's just load R's built-in *Iris* data set, and make it accessible to H2O.
+
+```{r}
+# Attach Iris data to current environment.
+data(iris)
+
+# Import the data from R into H2O.
+# NOTE: We only retain a handle to the data in R.
+# The destination_frame command is useful for later.
+iris.data = as.h2o(iris, destination_frame = "iris.hex")
+```
+
+It's important to understand that the variable `iris.data` is merely a **handle** to data in the H2O cloud.
+
+So now we can run `h2o.describe()` on the `H2OFrame` object we've created:
+
+```{r}
+# Describe the data set.
+h2o.describe(iris.data)
+```
+
+Evaluating the output of `str()` confirms that `iris.data` is indeed a `H2OFrame`.
+
+```{r}
+str(iris.data)
+```
+
+
+### Load a CSV file from the internet into H2O
+
+In the upcoming example, I'll be using the 1984 Congressional Voting Records from the **UCI Machine Learning Repository**:
+
+https://archive.ics.uci.edu/ml/datasets/congressional+voting+records
+
+The data set records the results of 16 key votes for 435 U.S. House of Representatives Congressmen, along with their party affiliation.
+
+We'll do something more interesting with this data later, but for now, here is how to load remote files:
+
+```{r}
+voting.url = "https://archive.ics.uci.edu/ml/machine-learning-databases/voting-records/house-votes-84.data"
+
+# Name the feature columns.
+feature.cols = paste0("vote", 1:16)
+
+# Use some extra args to specify column names and types.
+voting.data.raw = h2o.importFile(path = voting.url, 
+                             col.names = c("party", feature.cols), 
+                             col.types = rep("string", 17), 
+                             destination_frame = "voting.hex")
+```
+
+Once the data has been fetched, I can use an overloaded version of the `head()` function to peek into the data set:
+
+```{r}
+# There are some issues with some entries.
+head(voting.data.raw)
+```
+
+## Data manipulation in H2O
+
+For simplicity, all the missing values `"?"` are replaced with `"n"`. To make things a bit more readable, we have supplied the column headings upon loading. Lastly, we ensure that all variables are categorical in nature (or `enum`, in H2O terminology).
+
+This, and the examples before show how H2O implements some neat *syntactic sugar* by overloading standard R functions and operators, which makes dealing with Big Data relatively easy from within R. 
+
+However there are some caveats:
+
+```{r}
+# In plain R I would simply do this:
+#
+# voting.data.raw[voting.data.raw == "?"] = "n"
+#
+# However, the data frame semantics in H2O are different.
+
+# Messy way of cleaning the data set.
+fix.nas = function(df, col, na.val = "?", rep.val = "n") {
+  # Note how H2O overloads R's data frame semantics. Very powerful.
+  df[df[, col] == na.val, col] = rep.val
+  return(df)
+}
+
+# Very ugly code, not efficient at all!
+# Fix for each column.
+for (col in feature.cols) {
+  voting.data.raw = fix.nas(voting.data.raw, col)
+}
+
+# Want variables to be of a categorical nature.
+voting.data = h2o.asfactor(voting.data.raw)
+
+# Looks better now.
+head(voting.data)
+```
+
+## Example: US Congressional voting records analysis
+
+In this example, we'll apply and compare two different H2O classification algorithms to the voting records loaded before.
+
+The goal is to be able to learn from the data, and correctly predict a congress member's party association based on their voting behaviors.
+
+Formally, let $y_i$ be party association of the i^th^ congress member. Also let $x_j$ be their j^th^ vote, where $i = 1...435, j = 1...16$. For convenience we encode this as:
+
+$$
+\begin{aligned}
+x_j & = 
+  \begin{cases}
+    0, \text{if vote j was "no"}\\
+    1, \text{if vote j was "yes"}
+  \end{cases}, \\ 
+y_i & = 
+  \begin{cases}
+    0, \text{if member i is a republican}\\
+    1, \text{if member i is a democrat}
+  \end{cases}
+\end{aligned}
+$$
+
+### Splitting the data
+
+As usual, we split into test and training data.
+
+```{r}
+voting.split = h2o.splitFrame(data = voting.data, ratios = 0.8)
+voting.train = voting.split[[1]]
+voting.test = voting.split[[2]]
+
+# Identify response column.
+response = "party"
+```
+
+### GLM: Logistic regression
+
+We can perform classification with `h2o.glm()` simply by setting the `family` parameter to `binomial`. 
+
+As usual, let $X$ refer to the *design matrix*. The idea is to estimate parameters of a linear regression model using the *logit* of the response, i.e we are interested in the probabilities of the response: $\pi(\vec{x_i}) = \text{Pr}\{y_i = 1 | \vec{x_i}^T \}$, and the modeling approach is:
+
+$$
+\begin{aligned}
+\pi(X) &= \frac{\exp(X^T \vec{\beta})}{1 - \exp(X^T \vec{\beta)}}, \\
+\frac{\pi(X)}{1 - \pi(X)} &=  \exp(X^T \vec{\beta)}, \text{i.e.}\\
+\log \Big( \frac{\pi(X)}{1 - \pi(X)} \Big) &= X^T \vec{\beta}
+\end{aligned}
+$$
+H2O's implementation of GLM yields penalized maximum likelihood estimates for the parameters $\vec{\beta}$. 
+
+There are **many** tuning options, e.g. we can influence the amount of penalization by selecting the ratio between LASSO and Ridge regression, etc...
+
+```{r}
+# Very powerful. The underlying data set could be huge!
+fit.glm.votes = h2o.glm(x = feature.cols, 
+                  y = response, 
+                  training_frame = voting.train, 
+                  family = "binomial", 
+                  model_id = "glm.fit")
+
+# Predict on test data.
+pred.glm.votes = h2o.predict(object = fit.glm.votes,
+                   newdata = voting.test)
+```
+
+### Deep Learning classification
+
+This trains a Deep Neural Network model for classifying the political party using H2O's custom, CPU-based implementation of a feed-forward, multi-layer ANN.
+
+Again, there are many tuning parameters to play with, but I'm not going to go into it `;)`
+
+```{r}
+# Pretty cool, only one line of code!
+fit.deep.votes = h2o.deeplearning(x = feature.cols, 
+                            y = response,
+                            training_frame = voting.train, 
+                            model_id = "deeplearning.fit")  
+
+# Predict on the held-out data.
+pred.deep.votes = h2o.predict(object = fit.deep.votes,
+                   newdata = voting.test)
+```
+
+
+### Results on training data
+
+First let's compare the confusion matrices for both models on the training data:
+
+#### Logistic regression
+```{r}
+h2o.confusionMatrix(fit.glm.votes)
+```
+
+Looks fairly good, but some misclassification errors.
+
+#### Deep Learning
+
+```{r}
+h2o.confusionMatrix(fit.deep.votes)
+```
+
+This approach seems to do marginally better than GLM.
+
+### Results on test data
+
+But what about predicting on the held-out **test set**? What we need to do is to compare the predicted classes to the observed classes.
+
+The subsequent code demonstrates how to construct a confusion matrices for the test set, and how to calculate the test **prediction accuracy** using the diagonal and off-diagonal elements from the confusion matrix manually:
+
+$$
+acc = \frac{tp + tn}{tp + fp + tn + fn}
+$$
+
+In particular, note how we first combine columns in the H2O cloud, and then exported data into R. This is generally more efficient, however would not work if the resulting data frames were too large to fit into R:
+
+```{r}
+# Little helper function to calculate the accuracy.
+accuracy = function(tab) {
+  sum(diag(tab)) / sum(tab)
+}
+
+# Confusion matrices.
+res.train.glm = table(as.data.frame(h2o.cbind(voting.test["party"], pred.glm.votes["predict"])))
+res.train.deep = table(as.data.frame(h2o.cbind(voting.test["party"], pred.deep.votes["predict"])))
+```
+
+#### Logistic regression accuracy
+
+```{r}
+accuracy(res.train.glm)
+```
+
+#### Deep Learning
+
+```{r}
+accuracy(res.train.deep)
+```
+
+Both classifiers turn out a fairly decent prediction accuracy, but again it looks as though the neural net classifier performs slightly better.
+
+
+### Much simpler: `h2o.performance()`
+
+With the `h2o.performance()` function we would have gotten the same (and more) results, however all calculations are performed entirely in the H2O cloud:
+
+```{r}
+# Just for the GLM model.
+h2o.performance(model = fit.glm.votes, newdata = voting.test)
+```
+
+
+## Flow
+
+Quick walk-through of H2O's Flow UI.
+
+Flow is great for intuitively exploring data, building and assessing models through the browser, with little to no coding required.
+
+http://localhost:54321
+
+Some things to do:
+
+* Name flow.
+* List all data frames: `getFrames`.
+* Click on `iris.hex` frame.
+* Click on "View data".
+* Click on "Build model".
+* Build a k-Means model.
+* View model.
+* Download POJO! **WOW**
+* List models: `getModels`.
+* Select `glm.fit`
+* View parameters, ROC curve.
+
+## Steam
+
+Quick walk-through of Steam UI.
+
+Login: `superuser / superuser`.
+
+http://localhost:9000
+
+- Connect to running cluster
+    - Use IP and port of cluster.
+  
+- Create new project
+    - Select previously set-up cluster.
+    - Select a data frame
+    - Specify model type
+    - Import models
+    
+- Sadly, I got some import errors here `:(`

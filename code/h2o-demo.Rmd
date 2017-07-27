@@ -1,7 +1,7 @@
 ---
 title: "H2O Demo"
 author: "Ralph Schlosser"
-date: "26 July 2017"
+date: "27 July 2017"
 output: html_document
 bibliography: ../bibliography.bib
 ---
@@ -13,8 +13,6 @@ knitr::opts_chunk$set(echo = TRUE)
 
 # Enable chunk caching.
 knitr::opts_chunk$set(cache = TRUE)
-
-
 ```
 
 ## Introduction
@@ -90,8 +88,6 @@ Now we are in a position to connect R to the H2O docker container:
 
 # Use the below, when running the docker container locally.
 host.ip = "127.0.0.1"
-
-#host.ip = "10.44.149.118"
 h2o.init(ip = host.ip, startH2O = FALSE)
 
 # Disable progress bars for Rpubs. ;)
@@ -175,23 +171,17 @@ However there are some caveats:
 #
 # voting.data.raw[voting.data.raw == "?"] = "n"
 #
-# However, the data frame semantics in H2O are different.
+# However H2O's data frame semantics does not yet support this.
 
-# Messy way of cleaning the data set.
-fix.nas = function(df, col, na.val = "?", rep.val = "n") {
-  # Note how H2O overloads R's data frame semantics. Very powerful.
-  df[df[, col] == na.val, col] = rep.val
-  return(df)
-}
-
-# Very ugly code, not efficient at all!
-# Fix for each column.
-for (col in feature.cols) {
-  voting.data.raw = fix.nas(voting.data.raw, col)
-}
+# The best solution, as per Erin Ledell's suggestion is ot use h20.sub():
+voting.data = h2o.sub("\\\\?", "n", x = voting.data.raw)
 
 # Want variables to be of a categorical nature.
 voting.data = h2o.asfactor(voting.data.raw)
+
+# The above currently has an unexpected side-effect and removes the column names, so for now
+# we need to put in a temporary fix.
+colnames(voting.data) = colnames(voting.data.raw)
 
 # Looks better now.
 head(voting.data)

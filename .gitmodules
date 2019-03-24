@@ -1,0 +1,3 @@
+[submodule "texincludes"]
+	path = texincludes
+	url = https://github.com/bwv988/texincludes

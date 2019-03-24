@@ -7,7 +7,7 @@ output:
   beamer_presentation:
     incremental: false
     includes:
-      in_header: [includes/mystyle.tex, includes/settings.tex]
+      in_header: [texincludes/presentations/mystyle.tex, texincludes/presentations/settings.tex]
     keep_tex: true
 ---
 
